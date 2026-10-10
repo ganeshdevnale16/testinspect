@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1D2830" />
+  <title>Console - Inspection AI</title>
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="console.css?v=5.0.0" />
+</head>
+<body>
+  <div class="login" id="login" hidden>
+    <form class="login-card" id="loginForm" novalidate>
+      <div class="brandline"><svg viewBox="0 0 32 40" aria-hidden="true"><path d="M4 6h24v26a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" fill="#F5B800"/><circle cx="16" cy="11" r="3" fill="#1D2830"/><path d="M10 23l4.5 4.5L23 18" stroke="#1D2830" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Inspection AI Console</b></div>
+      <h1 id="loginTitle">Sign in</h1>
+      <p class="muted" id="loginHint">Admins, managers and the platform team sign in here. Inspectors use the field app.</p>
+      <div id="loginFields">
+        <label class="field"><span>Email</span><input name="email" type="email" autocomplete="username" required /></label>
+        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required /></label>
+      </div>
+      <div id="pwFields" hidden>
+        <label class="field"><span>New password</span><input name="next" type="password" autocomplete="new-password" /></label>
+        <label class="field"><span>Repeat new password</span><input name="next2" type="password" autocomplete="new-password" /></label>
+      </div>
+      <p class="err" id="loginErr" role="alert"></p>
+      <button class="btn primary block" id="loginBtn">Sign in</button>
+      <p class="muted small"><a href="/">Go to the field app</a></p>
+    </form>
+  </div>
+
+  <div class="shell" id="shell" hidden>
+    <aside class="side" id="side">
+      <a class="brand" href="#dashboard" id="brand"><img id="brandLogo" alt="" hidden /><span id="brandName">Inspection AI</span></a>
+      <div class="ctx" id="ctxBox"></div>
+      <nav id="nav" aria-label="Console"></nav>
+      <div class="side-foot">
+        <a href="/" class="side-link">Field app</a>
+        <button type="button" class="side-link" id="btnLogout">Sign out</button>
+      </div>
+    </aside>
+    <div class="main-col">
+      <header class="top">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+        <b class="ptitle" id="ptitle"></b>
+        <div class="support-bar" id="supportBar" hidden></div>
+        <span class="who" id="who"></span>
+      </header>
+      <main id="page" tabindex="-1"></main>
+    </div>
+    <nav class="mbar" id="mbar" aria-label="Quick menu"></nav>
+  </div>
+
+  <dialog id="modal"><form method="dialog" id="modalForm" novalidate>
+    <div class="modal-head"><h2 id="modalTitle"></h2><button type="button" class="x" id="modalX" aria-label="Close">✕</button></div>
+    <div id="modalBody"></div>
+    <p class="err" id="modalErr" role="alert"></p>
+    <div class="modal-foot" id="modalFoot"></div>
+  </form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="console.js?v=5.0.0"></script>
+</body>
+</html>

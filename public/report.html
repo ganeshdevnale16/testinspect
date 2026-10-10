@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inspection report</title>
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { --ink: #1D2830; --steel: #6B7980; --line: #D3D8D2; --green: #1F7A47; --amber: #E9B200; --red: #C33A22; --accent: #F5B800; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; color: var(--ink); margin: 0; background: #ECEEE9; font-size: 13px; line-height: 1.45; }
+    .page { background: #fff; max-width: 820px; margin: 1rem auto; padding: 28px 32px; }
+    .bar { display: flex; gap: .5rem; justify-content: center; padding: .8rem; }
+    .bar button { font: inherit; font-weight: 700; padding: .5rem 1rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+    .bar button.p { background: var(--accent); border-color: var(--accent); }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--accent); padding-bottom: 10px; gap: 1rem; }
+    header img { max-height: 48px; max-width: 180px; }
+    header .co { font-size: 18px; font-weight: 800; }
+    h1 { font-size: 20px; margin: 16px 0 4px; }
+    h2 { font-size: 14px; margin: 18px 0 6px; text-transform: none; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+    .result { display: flex; gap: 16px; align-items: center; margin: 10px 0; padding: 12px; border-radius: 10px; color: #fff; }
+    .result.GREEN { background: var(--green); } .result.YELLOW { background: var(--amber); color: #2B2300; } .result.RED { background: var(--red); }
+    .result b { font-size: 22px; letter-spacing: .02em; }
+    .kv { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 18px; }
+    .kv div { display: flex; gap: 6px; border-bottom: 1px dotted var(--line); padding: 3px 0; }
+    .kv dt { color: var(--steel); min-width: 110px; } .kv dd { margin: 0; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+    th { background: #F3F4F1; font-size: 12px; }
+    .ok { color: var(--green); font-weight: 700; } .bad { color: var(--red); font-weight: 700; } .unc { color: #8A6A00; font-weight: 700; }
+    .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .photos figure { margin: 0; break-inside: avoid; } .photos img { width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+    .photos figcaption { font-size: 11px; color: var(--steel); }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+    .sign div { border-top: 1px solid var(--ink); padding-top: 4px; color: var(--steel); }
+    footer { margin-top: 24px; font-size: 11px; color: var(--steel); border-top: 1px solid var(--line); padding-top: 6px; display: flex; justify-content: space-between; gap: 1rem; }
+    .err { text-align: center; padding: 3rem; }
+    @media print { body { background: #fff; } .page { margin: 0; max-width: none; padding: 0; } .bar { display: none; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="bar"><button class="p" onclick="print()">Print / save as PDF</button><button onclick="history.length > 1 ? history.back() : close()">Close</button></div>
+  <div class="page" id="page"><p>Loading…</p></div>
+  <script>
+  (async () => {
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmt = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+    const split = (s) => { let t = String(s || '').trim(); const c = t.startsWith('!'); if (c) t = t.slice(1); const [n, ...r] = t.split('::'); return { name: n.trim(), rule: r.join('::').trim(), critical: c }; };
+    const page = document.getElementById('page');
+    let token = ''; try { token = JSON.parse(localStorage.getItem('pc_token') || '""'); } catch {}
+    const id = new URLSearchParams(location.search).get('id');
+    const headers = { Authorization: 'Bearer ' + token };
+    const sup = sessionStorage.getItem('ia_support'); if (sup) headers['X-Tenant-Id'] = sup;
+    try {
+      const [ri, rm] = await Promise.all([fetch('/api/inspections/' + encodeURIComponent(id), { headers }), fetch('/api/me', { headers })]);
+      const di = await ri.json(); const me = await rm.json();
+      if (!ri.ok) throw new Error(di.error || 'Could not load the inspection.');
+      const x = di.inspection; const r = x.result || {}; const m = x.meta || {}; const b = me.tenant?.branding || {};
+      if (b.color) document.documentElement.style.setProperty('--accent', b.color);
+      const safety = Boolean(m.safety);
+      const words = { GREEN: safety ? 'SAFE TO USE' : 'PASSED', YELLOW: safety ? 'USE WITH CAUTION' : 'NEEDS REVIEW', RED: safety ? 'DO NOT USE' : 'FAILED' };
+      const st = { present: ['OK', 'ok'], missing: ['Not OK', 'bad'], unclear: ['Unclear', 'unc'] };
+      const custom = Object.values(m.custom || {});
+      document.title = `${x.templateName} ${x.assetCode || ''} - inspection report`;
+      page.innerHTML = `
+        <header><div>${b.logo ? `<img src="${b.logo}" alt="" />` : ''}<div class="co">${esc(me.tenant?.name || '')}</div></div>
+          <div style="text-align:right">Inspection report<br><b>No. ${esc(x.id.slice(0, 8).toUpperCase())}</b></div></header>
+        <h1>${esc(x.templateName)} - ${esc(x.assetCode || '')}</h1>
+        <div class="result ${esc(x.finalTag)}"><b>${esc(words[x.finalTag] || x.finalTag)}</b>
+          <span>${x.completion}% of checks OK (${x.counts.present || 0} OK, ${x.counts.missing || 0} not OK, ${x.counts.unclear || 0} unclear)${x.override?.status ? '. Result set by the inspector.' : ''}</span></div>
+        <dl class="kv">
+          <div><dt>${esc(m.idLabel || 'Asset ID')}</dt><dd>${esc(x.assetCode || '–')}</dd></div>
+          <div><dt>Date</dt><dd>${fmt(x.createdAt)}</dd></div>
+          <div><dt>Site</dt><dd>${esc(x.siteName || '–')}</dd></div>
+          <div><dt>Location</dt><dd>${esc(x.location || '–')}</dd></div>
+          <div><dt>Inspector</dt><dd>${esc(x.inspectorName)}</dd></div>
+          <div><dt>Reason</dt><dd>${esc(m.reason || '–')}</dd></div>
+          ${custom.map((c) => `<div><dt>${esc(c.label)}</dt><dd>${esc(c.value === true ? 'Yes' : c.value)}</dd></div>`).join('')}
+          ${m.gps ? `<div><dt>GPS</dt><dd>${m.gps.lat}, ${m.gps.lng}</dd></div>` : ''}
+          <div><dt>Review</dt><dd>${x.reviewStatus === 'not_required' ? 'Not required' : esc(x.reviewStatus)}${x.review ? ` by ${esc(x.review.by)}, ${fmt(x.review.at)}` : ''}</dd></div>
+        </dl>
+        ${(r.reasons || []).length ? `<h2>Why this result</h2><ul>${r.reasons.map((z) => `<li>${esc(z)}</li>`).join('')}</ul>` : ''}
+        <h2>Checklist</h2>
+        <table><thead><tr><th>View</th><th>Check</th><th>Result</th><th>AI evidence</th></tr></thead><tbody>
+          ${(r.checklist || []).map((c) => { const s = split(c.part); const [t, cl] = st[c.status] || [c.status, '']; return `<tr><td>${esc(c.group)}</td><td>${s.critical || c.critical ? '<b>[critical]</b> ' : ''}${esc(s.name)}${s.rule ? `<br><small>${esc(s.rule)}</small>` : ''}</td><td class="${cl}">${t}</td><td><small>${esc(c.note)}</small></td></tr>`; }).join('')}
+        </tbody></table>
+        ${(r.ai?.defects || []).length ? `<h2>Damage spotted</h2><ul>${r.ai.defects.map((d) => `<li><b>${esc(d.severity)}</b>: ${esc(d.description)}</li>`).join('')}</ul>` : ''}
+        ${x.override?.remarks ? `<h2>Remarks</h2><p>${esc(x.override.remarks)}</p>` : ''}
+        ${x.actions.length ? `<h2>Corrective actions</h2><table><thead><tr><th>Action</th><th>Severity</th><th>Status</th><th>Due</th></tr></thead><tbody>${x.actions.map((a) => `<tr><td>${esc(a.title)}</td><td>${esc(a.severity)}</td><td>${esc(a.status)}</td><td>${a.dueAt ? new Date(a.dueAt).toLocaleDateString() : ''}</td></tr>`).join('')}</tbody></table>` : ''}
+        <h2>Photos</h2><div class="photos">${x.photos.map((p) => `<figure><img src="${p.dataUrl}" alt="" /><figcaption>${esc(p.view)}</figcaption></figure>`).join('') || '<p>No photos.</p>'}</div>
+        <div class="sign"><div>Inspector: ${esc(x.inspectorName)}${x.signoff?.done ? ` (signed ${fmt(x.signoff.at)})` : ''}</div><div>Reviewed by${x.review ? ': ' + esc(x.review.by) : ''}</div></div>
+        <footer><span>${esc(b.report_footer || '')}</span><span>AI-assisted inspection${r.secondCheck ? ', every OK double-checked' : ''}. ${safety ? 'A competent person must confirm before use.' : 'The inspector makes the final decision.'}</span></footer>`;
+    } catch (e) {
+      page.innerHTML = `<div class="err"><h1>Could not open the report</h1><p>${esc(e.message)}</p><p>Sign in to the app first, then open the report again.</p></div>`;
+    }
+  })();
+  </script>
+</body>
+</html>
